@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noite de Sangue — Jogo de Detetive</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Playfair+Display:wght@700&display=swap');
+
+  :root {
+    --bg: #0d0d0d;
+    --panel: #1a1a1a;
+    --blood: #8b0000;
+    --blood-light: #c41e3a;
+    --text: #e8e0d5;
+    --muted: #8a8070;
+    --accent: #d4a574;
+    --success: #4caf50;
+    --danger: #c41e3a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Courier Prime', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(139,0,0,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(139,0,0,0.1) 0%, transparent 40%);
+  }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 16px; }
+
+  header {
+    text-align: center;
+    padding: 24px 0 16px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    color: var(--blood-light);
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(196,30,58,0.4);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 6px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .screen { display: none; animation: fadeIn 0.4s ease; }
+  .screen.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .panel h2 {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent);
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 6px;
+  }
+
+  .narrative { font-size: 1rem; margin-bottom: 14px; color: #d0c8b8; }
+  .narrative p { margin-bottom: 10px; }
+
+  .clue-box {
+    background: #111;
+    border-left: 3px solid var(--blood);
+    padding: 10px 14px;
+    margin: 10px 0;
+    font-size: 0.9rem;
+  }
+  .clue-box strong { color: var(--blood-light); }
+
+  .suspect-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 14px 0;
+  }
+
+  .suspect-card {
+    background: #121212;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .suspect-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+  }
+  .suspect-card.selected { border-color: var(--blood-light); background: #1f0f0f; }
+
+  .suspect-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .suspect-role { font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
+  .suspect-desc { font-size: 0.85rem; color: #b0a890; }
+
+  .btn {
+    display: inline-block;
+    background: var(--blood);
+    color: #fff;
+    border: none;
+    padding: 11px 24px;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.95rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .btn:hover {
+    background: var(--blood-light);
+    box-shadow: 0 0 14px rgba(196,30,58,0.4);
+  }
+  .btn:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  .btn-secondary:hover { background: var(--accent); color: #111; }
+
+  .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #111;
+    padding: 8px 14px;
+    border-radius: 3px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    border: 1px solid #2a2a2a;
+  }
+  .status-item { color: var(--muted); }
+  .status-item span { color: var(--accent); font-weight: bold; }
+
+  .dialogue {
+    background: #0f0f0f;
+    border: 1px solid #2a2a2a;
+    padding: 14px;
+    margin: 10px 0;
+    border-radius: 3px;
+  }
+  .dialogue .speaker { color: var(--blood-light); font-weight: bold; margin-bottom: 6px; }
+
+  .options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+
+  .option-btn {
+    background: #151515;
+    border: 1px solid #333;
+    color: var(--text);
+    padding: 12px 16px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 3px;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .option-btn:hover { border-color: var(--accent); background: #1c1c1c; }
+  .option-btn.used { opacity: 0.5; pointer-events: none; }
+
+  .result-box { text-align: center; padding: 24px 16px; }
+  .result-box h2 { font-size: 1.8rem; margin-bottom: 14px; }
+  .result-box.success h2 { color: var(--success); }
+  .result-box.fail h2 { color: var(--blood-light); }
+
+  .notebook {
+    background: #1a1612;
+    border: 1px solid #3a3020;
+    padding: 14px;
+    margin-top: 12px;
+    font-size: 0.88rem;
+  }
+  .notebook h3 { color: var(--accent); margin-bottom: 8px; font-size: 0.95rem; }
+  .notebook ul { list-style: none; padding-left: 0; }
+  .notebook li {
+    padding: 4px 0;
+    border-bottom: 1px dotted #333;
+    color: #c0b8a0;
+  }
+  .notebook li::before { content: "• "; color: var(--blood); }
+
+  footer { text-align: center; padding: 24px 0; color: #444; font-size: 0.75rem; }
+
+  .hidden { display: none !important; }
+
+  .diff-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .diff-card {
+    background: #121212;
+    border: 2px solid #333;
+    border-radius: 4px;
+    padding: 18px 14px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .diff-card:hover, .diff-card.selected {
+    border-color: var(--blood-light);
+    background: #1f0f0f;
+  }
+  .diff-card h3 {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .diff-card p { font-size: 0.8rem; color: var(--muted); }
+
+  .progress-bar {
+    height: 6px;
+    background: #222;
+    border-radius: 3px;
+    margin: 10px 0;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blood), var(--blood-light));
+    transition: width 0.4s;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 12px 0;
+    font-size: 0.85rem;
+  }
+  .stat { color: var(--muted); }
+  .stat b { color: var(--accent); }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    border: 1px solid var(--accent);
+    color: var(--text);
+    padding: 12px 24px;
+    border-radius: 4px;
+    z-index: 100;
+    animation: fadeIn 0.3s;
+    max-width: 90%;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- TELA INICIAL -->
+  <div id="screen-start" class="screen active">
+    <header>
+      <h1>NOITE DE SANGUE</h1>
+      <div class="subtitle">Mistérios de Assassinato</div>
+    </header>
+    <div class="panel">
+      <div class="narrative">
+        <p>Você é o <strong>Detetive Harlan Cross</strong>. Cada noite um novo crime. Cada caso, um assassino diferente.</p>
+        <p>Escolha a dificuldade e comece a investigação.</p>
+      </div>
+
+      <h2 style="margin-top:8px;">Nível de Dificuldade</h2>
+      <div class="diff-grid" id="diff-select">
+        <div class="diff-card selected" data-diff="facil" onclick="selectDiff(this)">
+          <h3>Fácil</h3>
+          <p>Mais pistas óbvias<br>Assassino mente pouco<br>Dicas disponíveis</p>
+        </div>
+        <div class="diff-card" data-diff="normal" onclick="selectDiff(this)">
+          <h3>Normal</h3>
+          <p>Pistas equilibradas<br>Mentiras moderadas<br>Sem dicas extras</p>
+        </div>
+        <div class="diff-card" data-diff="dificil" onclick="selectDiff(this)">
+          <h3>Difícil</h3>
+          <p>Pistas escassas<br>Mentiras elaboradas<br>Tempo limitado</p>
+        </div>
+        <div class="diff-card" data-diff="pesadelo" onclick="selectDiff(this)">
+          <h3>Pesadelo</h3>
+          <p>Quase sem pistas<br>Todos mentem<br>1 acusação apenas</p>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn" onclick="startNewCase()">Novo Caso</button>
+      </div>
+
+      <div class="stats-row" id="global-stats" style="margin-top:20px; border-top:1px solid #333; padding-top:12px;">
+        <div class="stat">Casos resolvidos: <b id="stat-wins">0</b></div>
+        <div class="stat">Casos falhos: <b id="stat-losses">0</b></div>
+        <div class="stat">Sequência: <b id="stat-streak">0</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA PRINCIPAL -->
+  <div id="screen-main" class="screen">
+    <header>
+      <h1 id="case-title">NOITE DE SANGUE</h1>
+      <div class="subtitle" id="case-subtitle">Investigação em andamento</div>
+    </header>
+
+    <div class="status-bar">
+      <div class="status-item">Pistas: <span id="clue-count">0</span></div>
+      <div class="status-item">Interrogados: <span id="interro-count">0</span>/<span id="interro-total">5</span></div>
+      <div class="status-item">Tempo: <span id="time-display">23:00</span></div>
+      <div class="status-item">Nível: <span id="diff-label">Normal</span></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+    <div class="panel">
+      <h2>Cena do Crime</h2>
+      <div class="narrative" id="crime-scene-text"></div>
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="btn-examine" onclick="examineScene()">Examinar Cena</button>
+        <button class="btn btn-secondary" onclick="showSuspects()">Suspeitos</button>
+        <button class="btn btn-secondary" onclick="openNotebook()">Caderno</button>
+        <button class="btn btn-secondary" id="btn-hint" onclick="useHint()" style="display:none;">Dica</button>
+        <button class="btn" id="btn-accuse" onclick="startAccusation()" disabled>Acusar</button>
+      </div>
+    </div>
+
+    <div id="notebook-panel" class="panel hidden">
+      <h2>Caderno de Anotações</h2>
+      <div class="notebook">
+        <h3>Pistas descobertas</h3>
+        <ul id="notebook-clues"><li style="color:#555;">Nenhuma ainda...</li></ul>
+        <h3 style="margin-top:12px;">Observações</h3>
+        <ul id="notebook-notes"><li style="color:#555;">Comece a investigar.</li></ul>
+      </div>
+      <button class="btn btn-secondary" onclick="closeNotebook()" style="margin-top:10px;">Fechar</button>
+    </div>
+  </div>
+
+  <!-- SUSPEITOS -->
+  <div id="screen-suspects" class="screen">
+    <header>
+      <h1>OS SUSPEITOS</h1>
+      <div class="subtitle">Quem tem sangue nas mãos?</div>
+    </header>
+    <div class="panel">
+      <div class="suspect-grid" id="suspect-list"></div>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="backToMain()">Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERROGATÓRIO -->
+  <div id="screen-interro" class="screen">
+    <header>
+      <h1 id="interro-title">Interrogatório</h1>
+      <div class="subtitle" id="interro-role"></div>
+    </header>
+    <div class="panel">
+      <div class="dialogue" id="interro-dialogue"></div>
+      <div class="options" id="interro-options"></div>
+      <div class="btn-group" style="margin-top:16px;">
+        <button class="btn btn-secondary" onclick="backToSuspects()">Voltar aos Suspeitos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACUSAÇÃO -->
+  <div id="screen-accuse" class="screen">
+    <header>
+      <h1>A ACUSAÇÃO</h1>
+      <div class="subtitle">Escolha com cuidado</div>
+    </header>
+    <div class="panel">
+      <div class="narrative">
+        <p>Você reúne todos. É hora de revelar o assassino.</p>
+        <p id="accuse-warning" style="color:var(--blood-light);"></p>
+      </div>
+      <div class="suspect-grid" id="accuse-list"></div>
+      <div class="btn-group">
+        <button class="btn btn-secondary" onclick="backToMain()">Ainda não...</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div id="screen-result" class="screen">
+    <header>
+      <h1>NOITE DE SANGUE</h1>
+    </header>
+    <div class="panel">
+      <div id="result-content" class="result-box"></div>
+      <div class="btn-group" style="justify-content:center;">
+        <button class="btn" onclick="goHome()">Novo Caso</button>
+        <button class="btn btn-secondary" onclick="restartSame()">Outro Caso</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>Detetive Harlan Cross — Casos Infinitos</footer>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+// =====================================================
+//  BANCO DE CENÁRIOS
+// =====================================================
+const SCENARIOS = [
+  {
+    id: 'mansao',
+    title: 'Mansão Blackwood',
+    victim: 'Lord Edmund Blackwood',
+    setting: 'A mansão Blackwood, 1927. O corpo de Lord Edmund Blackwood jaz no escritório com um punhal no peito. A lareira ainda crepita. Um copo de whisky quebrado no chão. A janela está entreaberta.',
+    weapon: 'punhal de prata',
+    year: 1927
+  },
+  {
+    id: 'hotel',
+    title: 'Hotel Imperial',
+    victim: 'Madame Vivienne Moreau',
+    setting: 'O Hotel Imperial, 1934. Madame Vivienne Moreau foi encontrada morta em seu quarto de luxo. Estrangulada com seu próprio lenço de seda. A porta estava trancada por dentro. O telefone está fora do gancho.',
+    weapon: 'lenço de seda',
+    year: 1934
+  },
+  {
+    id: 'trem',
+    title: 'Expresso Noturno',
+    victim: 'Dr. Arthur Kessler',
+    setting: 'O Expresso Noturno para Viena, 1948. Dr. Arthur Kessler foi encontrado morto no compartimento 7. Envenenado. A janela do corredor estava aberta. Ninguém ouviu gritos.',
+    weapon: 'veneno (cianeto)',
+    year: 1948
+  },
+  {
+    id: 'teatro',
+    title: 'Teatro Apollo',
+    victim: 'Isabella Rossi',
+    setting: 'O Teatro Apollo, 1952. A prima-dona Isabella Rossi caiu morta no palco durante o ensaio final. Uma bala no peito. A arma sumiu. As luzes se apagaram por 30 segundos.',
+    weapon: 'revólver calibre 32',
+    year: 1952
+  },
+  {
+    id: 'navio',
+    title: 'SS Aurora',
+    victim: 'Capitão James Hawthorne',
+    setting: 'O navio SS Aurora, no meio do Atlântico, 1961. O Capitão James Hawthorne foi encontrado morto em sua cabine. Golpeado na cabeça. O diário de bordo está aberto na última página: "Alguém a bordo não é quem diz ser."',
+    weapon: 'peso de papel de bronze',
+    year: 1961
+  }
+];
+
+const SUSPECT_POOL = [
+  {
+    archetype: 'spouse',
+    names: ['Clara', 'Helena', 'Sophia', 'Margaret', 'Victoria'],
+    roles: ['Esposa do falecido', 'Cônjuge da vítima'],
+    descs: ['Elegante e fria, olhos cansados.', 'Nervosa, evita contato visual.', 'Calma demais para a situação.']
+  },
+  {
+    archetype: 'partner',
+    names: ['Victor', 'Richard', 'Charles', 'Edward', 'William'],
+    roles: ['Sócio de negócios', 'Parceiro comercial', 'Investidor'],
+    descs: ['Homem robusto, cheiro de tabaco.', 'Traje caro, relógio de ouro.', 'Olhar calculista e impaciente.']
+  },
+  {
+    archetype: 'assistant',
+    names: ['Elise', 'Anna', 'Rose', 'Lily', 'Grace'],
+    roles: ['Secretária particular', 'Assistente pessoal'],
+    descs: ['Jovem, óculos redondos, tremendo.', 'Discreta, quase invisível.', 'Inteligente demais para o cargo.']
+  },
+  {
+    archetype: 'servant',
+    names: ['Thomas', 'George', 'Henry', 'Alfred', 'James'],
+    roles: ['Mordomo', 'Servo de confiança', 'Administrador'],
+    descs: ['Idoso, postura impecável.', 'Voz baixa e controlada.', 'Conhece todos os segredos.']
+  },
+  {
+    archetype: 'relative',
+    names: ['Eleanor', 'Catherine', 'Beatrice', 'Dorothy', 'Frances'],
+    roles: ['Irmã da vítima', 'Prima distante', 'Herdeira potencial'],
+    descs: ['Viúva, vestido preto, olhar penetrante.', 'Chegou ontem, mal conhecia a vítima.', 'Sorri de forma estranha.']
+  },
+  {
+    archetype: 'rival',
+    names: ['Marcus', 'Julian', 'Sebastian', 'Adrian', 'Felix'],
+    roles: ['Rival profissional', 'Concorrente', 'Inimigo declarado'],
+    descs: ['Sorriso forçado, mãos nas costas.', 'Chegou sem ser convidado.', 'Histórico de ameaças.']
+  },
+  {
+    archetype: 'lover',
+    names: ['Isabelle', 'Camille', 'Nina', 'Diana', 'Sylvia'],
+    roles: ['Amante secreta', 'Ex-namorada', 'Interesse romântico'],
+    descs: ['Beleza marcante, perfume forte.', 'Olhos vermelhos de choro.', 'Nega qualquer envolvimento.']
+  },
+  {
+    archetype: 'doctor',
+    names: ['Dr. Wells', 'Dr. Price', 'Dr. Shaw', 'Dr. Grant', 'Dr. Hayes'],
+    roles: ['Médico da família', 'Médico pessoal'],
+    descs: ['Maleta preta, mãos firmes.', 'Conhece todos os venenos.', 'Chegou logo após o corpo ser encontrado.']
+  }
+];
+
+const MOTIVES = {
+  spouse: [
+    'Descobriu que a vítima planejava o divórcio e deixá-la sem nada.',
+    'Descobriu uma traição e não suportou a humilhação.',
+    'A vítima controlava todo o dinheiro e a vida social.'
+  ],
+  partner: [
+    'A vítima descobriu desvios de fundos e ameaçou denunciar.',
+    'A parceria estava prestes a ser dissolvida com prejuízo enorme.',
+    'A vítima recusou um negócio lucrativo e ilegal.'
+  ],
+  assistant: [
+    'A vítima descobriu vazamento de informações e ameaçou demissão pública.',
+    'Anos de abuso e humilhação chegaram ao limite.',
+    'A vítima descobriu um segredo do passado e chantagemou.'
+  ],
+  servant: [
+    'Serviu por décadas e seria dispensado sem pensão.',
+    'Descobriu que a vítima o acusava de roubo injustamente.',
+    'A vítima o humilhava publicamente há anos.'
+  ],
+  relative: [
+    'Herdeira principal. A vítima planejava mudar o testamento.',
+    'A vítima controlava a herança familiar e ameaçava cortar todo mundo.',
+    'Ódio antigo por uma injustiça familiar nunca resolvida.'
+  ],
+  rival: [
+    'A vítima arruinou a carreira e a reputação publicamente.',
+    'Disputa por um contrato milionário que a vítima estava prestes a ganhar.',
+    'A vítima possuía provas de um crime antigo do rival.'
+  ],
+  lover: [
+    'A vítima prometeu deixar o cônjuge e nunca cumpriu.',
+    'Descobriu que era apenas mais uma conquista e foi descartada.',
+    'A vítima ameaçou revelar o caso e destruir a reputação.'
+  ],
+  doctor: [
+    'A vítima descobriu um erro médico grave e ameaçou processar.',
+    'Prescreveu medicamentos controlados ilegalmente e a vítima ia denunciar.',
+    'A vítima era a única testemunha de um procedimento ilegal.'
+  ]
+};
+
+const DIFFICULTY = {
+  facil: {
+    label: 'Fácil',
+    clueChance: 0.85,
+    sceneClues: 4,
+    lieChance: 0.2,
+    killerLieChance: 0.4,
+    hints: 2,
+    minInterro: 2,
+    minClues: 2,
+    timeLimit: null,
+    oneShot: false
+  },
+  normal: {
+    label: 'Normal',
+    clueChance: 0.6,
+    sceneClues: 3,
+    lieChance: 0.35,
+    killerLieChance: 0.55,
+    hints: 0,
+    minInterro: 3,
+    minClues: 3,
+    timeLimit: null,
+    oneShot: false
+  },
+  dificil: {
+    label: 'Difícil',
+    clueChance: 0.4,
+    sceneClues: 2,
+    lieChance: 0.5,
+    killerLieChance: 0.7,
+    hints: 0,
+    minInterro: 4,
+    minClues: 4,
+    timeLimit: 90,
+    oneShot: false
+  },
+  pesadelo: {
+    label: 'Pesadelo',
+    clueChance: 0.25,
+    sceneClues: 1,
+    lieChance: 0.7,
+    killerLieChance: 0.85,
+    hints: 0,
+    minInterro: 5,
+    minClues: 3,
+    timeLimit: 60,
+    oneShot: true
+  }
+};
+
+let difficulty = 'facil';
+let currentCase = null;
+let state = null;
+let stats = { wins: 0, losses: 0, streak: 0 };
+
+try {
+  const saved = localStorage.getItem('noiteSangreStats');
+  if (saved) stats = JSON.parse(saved);
+} catch(e) {}
+
+function saveStats() {
+  try { localStorage.setItem('noiteSangreStats', JSON.stringify(stats)); } catch(e) {}
+  updateGlobalStats();
+}
+
+function updateGlobalStats() {
+  document.getElementById('stat-wins').textContent = stats.wins;
+  document.getElementById('stat-losses').textContent = stats.losses;
+  document.getElementById('stat-streak').textContent = stats.streak;
+}
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generateCase() {
+  const scenario = pick(SCENARIOS);
+  const diff = DIFFICULTY[difficulty];
+
+  const archetypes = shuffle(SUSPECT_POOL).slice(0, 5);
+  const usedNames = new Set();
+
+  const suspects = archetypes.map((arch, idx) => {
+    let name = pick(arch.names);
+    while (usedNames.has(name)) name = pick(arch.names);
+    usedNames.add(name);
+
+    return {
+      id: 's' + idx,
+      name,
+      role: pick(arch.roles),
+      desc: pick(arch.descs),
+      archetype: arch.archetype,
+      motive: pick(MOTIVES[arch.archetype]),
+      isKiller: false,
+      alibi: null,
+      statements: [],
+      cluesLinked: []
+    };
+  });
+
+  const killerIdx = Math.floor(Math.random() * suspects.length);
+  suspects[killerIdx].isKiller = true;
+  const killer = suspects[killerIdx];
+
+  const allClues = generateClues(scenario);
+  allClues.forEach((clue, i) => {
+    const linked = suspects[i % suspects.length];
+    linked.cluesLinked.push(clue.id);
+  });
+
+  generateStatements(suspects, killer, scenario, diff);
+
+  return {
+    scenario,
+    suspects,
+    clues: allClues,
+    killerId: killer.id,
+    sceneText: scenario.setting,
+    diff
+  };
+}
+
+function generateClues(scenario) {
+  const templates = [
+    { baseId: 'weapon', name: 'Arma do crime', text: 'A arma (' + scenario.weapon + ') foi encontrada perto do corpo. Não há digitais claras.' },
+    { baseId: 'footprint', name: 'Pegada', text: 'Uma pegada parcial de sapato próximo à porta. Tamanho médio.' },
+    { baseId: 'perfume', name: 'Cheiro residual', text: 'Um perfume residual no ar. Dois suspeitos usam fragrâncias semelhantes.' },
+    { baseId: 'letter', name: 'Carta rasgada', text: 'Fragmentos de uma carta. Trechos legíveis mencionam ameaças e dinheiro.' },
+    { baseId: 'key', name: 'Chave', text: 'Uma chave foi encontrada caída perto da cena. Pertence a um dos presentes.' },
+    { baseId: 'document', name: 'Documento comprometedor', text: 'Parte de um documento rasgado. Menciona irregularidades e um nome parcialmente legível.' },
+    { baseId: 'timepiece', name: 'Relógio parado', text: 'Um relógio quebrado marca aproximadamente a hora do crime.' },
+    { baseId: 'window', name: 'Janela forçada', text: 'Sinais de que a janela foi aberta de dentro. Alguém tentou criar a ilusão de fuga.' },
+    { baseId: 'glove', name: 'Luva', text: 'Uma luva esquerda encontrada no corredor. Tamanho pequeno/médio.' },
+    { baseId: 'note', name: 'Bilhete anônimo', text: 'Um bilhete no bolso da vítima: "Você sabe demais. Esta é a última advertência."' }
+  ];
+
+  return shuffle(templates).slice(0, 8).map((c, i) => ({
+    id: c.baseId + '_' + i,
+    name: c.name,
+    text: c.text,
+    revealed: false
+  }));
+}
+
+function generateStatements(suspects, killer, scenario, diff) {
+  const places = ['o quarto', 'a biblioteca', 'o jardim', 'a cozinha', 'o salão', 'o corredor', 'a sala de jantar', 'o terraço'];
+
+  suspects.forEach(s => {
+    const place = pick(places);
+    s.alibi = 'Estava em ' + place + ' por volta da hora do crime.';
+
+    const qs = [
+      { q: 'Onde você estava na hora do crime?', type: 'alibi' },
+      { q: 'Qual era sua relação com a vítima?', type: 'relation' },
+      { q: 'Viu ou ouviu algo suspeito?', type: 'witness' },
+      { q: 'Por que alguém mataria a vítima?', type: 'motive' }
+    ];
+
+    s.statements = qs.map(qObj => {
+      let answer = '';
+      let isLie = s.isKiller ? (Math.random() < diff.killerLieChance) : (Math.random() < diff.lieChance);
+
+      if (qObj.type === 'alibi') {
+        answer = isLie
+          ? 'Eu estava em ' + pick(places) + ' o tempo todo. Não saí de lá.'
+          : s.alibi;
+      } else if (qObj.type === 'relation') {
+        answer = (s.isKiller && isLie)
+          ? 'Tínhamos uma relação profissional e respeitosa. Nada de mais.'
+          : 'Havia tensões. ' + s.motive.substring(0, 70) + '...';
+      } else if (qObj.type === 'witness') {
+        if (isLie) {
+          answer = 'Não vi nem ouvi absolutamente nada de estranho.';
+        } else {
+          const other = pick(suspects.filter(x => x.id !== s.id));
+          answer = 'Vi ' + other.name + ' agindo de forma estranha mais cedo. Parecia nervoso(a).';
+        }
+      } else {
+        if (s.isKiller && isLie) {
+          answer = 'Não faço ideia. A vítima era querida por todos.';
+        } else {
+          const target = pick(suspects.filter(x => x.id !== s.id));
+          answer = target.name + ' tinha motivos. Já ouvi conversas tensas entre eles.';
+        }
+      }
+
+      return { q: qObj.q, a: answer, isLie, asked: false };
+    });
+  });
+}
+
+function selectDiff(el) {
+  document.querySelectorAll('.diff-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  difficulty = el.dataset.diff;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showToast(msg, duration) {
+  duration = duration || 2800;
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.add('hidden'); }, duration);
+}
+
+function startNewCase() {
+  currentCase = generateCase();
+  state = {
+    cluesFound: [],
+    interrogated: [],
+    notes: [],
+    time: 22 * 60 + 30,
+    sceneExamined: false,
+    hintsLeft: currentCase.diff.hints,
+    accused: false,
+    questionsAsked: {}
+  };
+
+  document.getElementById('case-title').textContent = currentCase.scenario.title.toUpperCase();
+  document.getElementById('case-subtitle').textContent = 'Vítima: ' + currentCase.scenario.victim + ' — ' + currentCase.scenario.year;
+  document.getElementById('crime-scene-text').innerHTML = '<p>' + currentCase.sceneText + '</p>';
+  document.getElementById('diff-label').textContent = currentCase.diff.label;
+  document.getElementById('interro-total').textContent = currentCase.suspects.length;
+  document.getElementById('btn-accuse').disabled = true;
+  document.getElementById('btn-examine').disabled = false;
+  document.getElementById('notebook-panel').classList.add('hidden');
+
+  const hintBtn = document.getElementById('btn-hint');
+  if (currentCase.diff.hints > 0) {
+    hintBtn.style.display = 'inline-block';
+    hintBtn.textContent = 'Dica (' + state.hintsLeft + ')';
+  } else {
+    hintBtn.style.display = 'none';
+  }
+
+  updateStatus();
+  showScreen('screen-main');
+  showToast('Novo caso: ' + currentCase.scenario.title + ' — ' + currentCase.diff.label);
+}
+
+function goHome() {
+  updateGlobalStats();
+  showScreen('screen-start');
+}
+
+function restartSame() {
+  startNewCase();
+}
+
+function updateStatus() {
+  document.getElementById('clue-count').textContent = state.cluesFound.length;
+  document.getElementById('interro-count').textContent = state.interrogated.length;
+
+  const h = Math.floor(state.time / 60) % 24;
+  const m = state.time % 60;
+  document.getElementById('time-display').textContent =
+    String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+
+  const progress = Math.min(100, (state.cluesFound.length * 12 + state.interrogated.length * 15));
+  document.getElementById('progress-fill').style.width = progress + '%';
+
+  const d = currentCase.diff;
+  if (state.interrogated.length >= d.minInterro && state.cluesFound.length >= d.minClues) {
+    document.getElementById('btn-accuse').disabled = false;
+  }
+
+  if (d.timeLimit) {
+    const elapsed = state.time - (22 * 60 + 30);
+    if (elapsed >= d.timeLimit) {
+      showToast('O tempo acabou! Você precisa acusar agora.', 4000);
+      document.getElementById('btn-accuse').disabled = false;
+    }
+  }
+}
+
+function advanceTime(mins) {
+  state.time += mins;
+  updateStatus();
+}
+
+function examineScene() {
+  if (state.sceneExamined) {
+    showToast('Você já examinou a cena com cuidado.');
+    return;
+  }
+  state.sceneExamined = true;
+  advanceTime(12);
+
+  const d = currentCase.diff;
+  const available = currentCase.clues.filter(function(c) { return state.cluesFound.indexOf(c.id) === -1; });
+  const toFind = Math.min(d.sceneClues, available.length);
+  const found = shuffle(available).slice(0, toFind);
+
+  var html = '<p>Você examina a cena com atenção...</p>';
+  found.forEach(function(c) {
+    state.cluesFound.push(c.id);
+    c.revealed = true;
+    html += '<div class="clue-box"><strong>Pista:</strong> ' + c.name + '<br>' + c.text + '</div>';
+  });
+
+  if (found.length === 0) {
+    html += '<p style="color:var(--muted);">Nada de novo encontrado desta vez.</p>';
+  }
+
+  document.getElementById('crime-scene-text').innerHTML = html;
+  document.getElementById('btn-examine').disabled = true;
+  addNote('Examinei a cena. Encontrei ' + found.length + ' pista(s).');
+  updateStatus();
+}
+
+function showSuspects() {
+  const list = document.getElementById('suspect-list');
+  list.innerHTML = '';
+  currentCase.suspects.forEach(function(s) {
+    const card = document.createElement('div');
+    card.className = 'suspect-card' + (state.interrogated.indexOf(s.id) !== -1 ? ' selected' : '');
+    card.innerHTML =
+      '<div class="suspect-name">' + s.name + '</div>' +
+      '<div class="suspect-role">' + s.role + '</div>' +
+      '<div class="suspect-desc">' + s.desc + '</div>' +
+      (state.interrogated.indexOf(s.id) !== -1 ? '<div style="margin-top:6px;color:var(--muted);font-size:0.75rem;">✓ Interrogado</div>' : '');
+    card.onclick = function() { interrogate(s.id); };
+    list.appendChild(card);
+  });
+  showScreen('screen-suspects');
+}
+
+function backToMain() { showScreen('screen-main'); }
+function backToSuspects() { showSuspects(); }
+
+function interrogate(id) {
+  const s = currentCase.suspects.find(function(x) { return x.id === id; });
+  if (!s) return;
+
+  advanceTime(7);
+  if (state.interrogated.indexOf(id) === -1) {
+    state.interrogated.push(id);
+  }
+  if (!state.questionsAsked[id]) state.questionsAsked[id] = {};
+
+  const d = currentCase.diff;
+  s.cluesLinked.forEach(function(cid) {
+    if (state.cluesFound.indexOf(cid) === -1 && Math.random() < d.clueChance) {
+      state.cluesFound.push(cid);
+      const clue = currentCase.clues.find(function(c) { return c.id === cid; });
+      if (clue) {
+        clue.revealed = true;
+        addNote('Pista revelada com ' + s.name + ': ' + clue.name);
+      }
+    }
+  });
+
+  document.getElementById('interro-title').textContent = s.name;
+  document.getElementById('interro-role').textContent = s.role;
+
+  const first = s.statements[0];
+  document.getElementById('interro-dialogue').innerHTML =
+    '<div class="speaker">' + s.name + '</div><p>"' + first.a + '"</p>';
+
+  const opts = document.getElementById('interro-options');
+  opts.innerHTML = '';
+  s.statements.forEach(function(st, i) {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn' + (state.questionsAsked[id][i] ? ' used' : '');
+    btn.textContent = st.q;
+    btn.onclick = function() {
+      state.questionsAsked[id][i] = true;
+      btn.classList.add('used');
+      document.getElementById('interro-dialogue').innerHTML =
+        '<div class="speaker">' + s.name + '</div><p>"' + st.a + '"</p>';
+
+      if (i > 0 && s.cluesLinked.length > 0 && Math.random() < d.clueChance) {
+        const cid = s.cluesLinked[Math.min(i - 1, s.cluesLinked.length - 1)];
+        if (state.cluesFound.indexOf(cid) === -1) {
+          state.cluesFound.push(cid);
+          const clue = currentCase.clues.find(function(c) { return c.id === cid; });
+          if (clue) {
+            addNote('Nova pista: ' + clue.name);
+            setTimeout(function() {
+              const box = document.createElement('div');
+              box.className = 'clue-box';
+              box.innerHTML = '<strong>Pista descoberta:</strong> ' + clue.name + '<br>' + clue.text;
+              document.getElementById('interro-dialogue').appendChild(box);
+            }, 250);
+          }
+        }
+      }
+      updateStatus();
+    };
+    opts.appendChild(btn);
+  });
+
+  updateStatus();
+  showScreen('screen-interro');
+}
+
+function openNotebook() {
+  const cluesUl = document.getElementById('notebook-clues');
+  const notesUl = document.getElementById('notebook-notes');
+
+  if (state.cluesFound.length === 0) {
+    cluesUl.innerHTML = '<li style="color:#555;">Nenhuma pista ainda...</li>';
+  } else {
+    cluesUl.innerHTML = state.cluesFound.map(function(cid) {
+      const c = currentCase.clues.find(function(x) { return x.id === cid; });
+      return c ? '<li><strong>' + c.name + ':</strong> ' + c.text + '</li>' : '';
+    }).join('');
+  }
+
+  if (state.notes.length === 0) {
+    notesUl.innerHTML = '<li style="color:#555;">Continue investigando.</li>';
+  } else {
+    notesUl.innerHTML = state.notes.map(function(n) { return '<li>' + n + '</li>'; }).join('');
+  }
+
+  document.getElementById('notebook-panel').classList.remove('hidden');
+}
+
+function closeNotebook() {
+  document.getElementById('notebook-panel').classList.add('hidden');
+}
+
+function addNote(text) {
+  if (state.notes.indexOf(text) === -1) state.notes.push(text);
+}
+
+function useHint() {
+  if (state.hintsLeft <= 0) {
+    showToast('Você não tem mais dicas.');
+    return;
+  }
+  state.hintsLeft--;
+  document.getElementById('btn-hint').textContent = 'Dica (' + state.hintsLeft + ')';
+
+  const remaining = currentCase.clues.filter(function(c) { return state.cluesFound.indexOf(c.id) === -1; });
+  if (remaining.length > 0) {
+    const clue = pick(remaining);
+    state.cluesFound.push(clue.id);
+    clue.revealed = true;
+    addNote('[DICA] ' + clue.name + ': ' + clue.text);
+    showToast('Dica: ' + clue.name + ' — ' + clue.text.substring(0, 60) + '...');
+  } else {
+    const killer = currentCase.suspects.find(function(s) { return s.isKiller; });
+    showToast('Dica: Preste atenção em quem tem motivo ligado a ' + killer.role.toLowerCase() + '.');
+    addNote('[DICA] Foque no papel: ' + killer.role);
+  }
+  updateStatus();
+}
+
+function startAccusation() {
+  const list = document.getElementById('accuse-list');
+  list.innerHTML = '';
+  currentCase.suspects.forEach(function(s) {
+    const card = document.createElement('div');
+    card.className = 'suspect-card';
+    card.innerHTML =
+      '<div class="suspect-name">' + s.name + '</div>' +
+      '<div class="suspect-role">' + s.role + '</div>' +
+      '<div class="suspect-desc">' + s.desc + '</div>';
+    card.onclick = function() { makeAccusation(s.id); };
+    list.appendChild(card);
+  });
+
+  const warn = document.getElementById('accuse-warning');
+  if (currentCase.diff.oneShot) {
+    warn.textContent = '⚠ Modo Pesadelo: você só tem UMA chance. Escolha com extremo cuidado.';
+  } else {
+    warn.textContent = '';
+  }
+
+  showScreen('screen-accuse');
+}
+
+function makeAccusation(id) {
+  if (state.accused && currentCase.diff.oneShot) return;
+  state.accused = true;
+
+  const s = currentCase.suspects.find(function(x) { return x.id === id; });
+  const killer = currentCase.suspects.find(function(x) { return x.isKiller; });
+  const content = document.getElementById('result-content');
+  const correct = s.isKiller;
+
+  if (correct) {
+    stats.wins++;
+    stats.streak++;
+    content.className = 'result-box success';
+    content.innerHTML =
+      '<h2>✦ CASO RESOLVIDO ✦</h2>' +
+      '<p style="font-size:1.05rem; margin:12px 0;">Você acusou corretamente <strong>' + s.name + '</strong>.</p>' +
+      '<div class="clue-box" style="text-align:left; margin:16px auto; max-width:520px;">' +
+      '<strong>A verdade:</strong><br>' +
+      s.name + ' (' + s.role + ') matou ' + currentCase.scenario.victim + ' usando ' + currentCase.scenario.weapon + '.<br><br>' +
+      '<em>Motivo:</em> ' + s.motive +
+      '</div>' +
+      '<div class="stats-row" style="justify-content:center;">' +
+      '<div class="stat">Pistas: <b>' + state.cluesFound.length + '</b></div>' +
+      '<div class="stat">Interrogados: <b>' + state.interrogated.length + '</b></div>' +
+      '<div class="stat">Nível: <b>' + currentCase.diff.label + '</b></div>' +
+      '</div>' +
+      '<p style="margin-top:12px; color:var(--success);">Excelente trabalho, Detetive Cross.</p>';
+  } else {
+    stats.losses++;
+    stats.streak = 0;
+    content.className = 'result-box fail';
+    content.innerHTML =
+      '<h2>✗ ACUSAÇÃO ERRADA</h2>' +
+      '<p style="font-size:1.05rem; margin:12px 0;">Você acusou <strong>' + s.name + '</strong>, mas o verdadeiro assassino era <strong>' + killer.name + '</strong>.</p>' +
+      '<div class="clue-box" style="text-align:left; margin:16px auto; max-width:520px;">' +
+      '<strong>A verdade:</strong><br>' +
+      killer.name + ' (' + killer.role + ') matou ' + currentCase.scenario.victim + '.<br><br>' +
+      '<em>Motivo:</em> ' + killer.motive +
+      '</div>' +
+      '<p style="color:var(--muted); margin-top:14px;">O culpado escapou... desta vez.</p>';
+  }
+
+  saveStats();
+  showScreen('screen-result');
+}
+
+updateGlobalStats();
+showScreen('screen-start');
+</script>
+</body>
+</html>
